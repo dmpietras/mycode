@@ -1,0 +1,38 @@
+---
+- name: PowerEdge Firmware Prechecks Playbook
+  hosts: idrac
+  connection: local
+  gather_facts: no
+
+  collections:
+    - dellemc.openmanage
+
+  vars:
+    idrac_user: root
+    idrac_password: r0gerwilc0
+
+  tasks:
+  # When connecting to a redfish interface dont use gather_facts
+  # community.general.redfish_info is a possible replacement
+  - name: Get PowerEdge Firmware info
+    idrac_firmware_info:
+      idrac_ip: "{{ idrac_ip }}"
+      idrac_user: "{{ idrac_user }}"
+      idrac_password: "{{ idrac_password }}"
+      validate_certs: False
+    register: results
+
+  # Precheck
+  - name: Assert that an expected condition is true (this is a chicago asset)
+    assert:
+      that:
+          - "'82' in results.firmware_info.Firmware[2].BuildNumber"
+      success_msg: "Confirmed Build number is 82"
+
+  - name: Ensure the correct model is being used
+    assert:
+     that:
+         - results.firmware_info.Firmware[2].VersionString == "2.82.82.82"
+     success_msg: "Confrimed firmware version is 2.82.82.82"
+     fail_msg: "This does not appear to be the proper firmware version of 2.82.82.82. Aborting."
+
